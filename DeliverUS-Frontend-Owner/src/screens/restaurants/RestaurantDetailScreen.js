@@ -4,17 +4,20 @@ import { StyleSheet, View, FlatList, ImageBackground, Image, Pressable } from 'r
 import { showMessage } from 'react-native-flash-message'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { getDetail } from '../../api/RestaurantEndpoints'
-import { remove } from '../../api/ProductEndpoints'
+import { promote, remove } from '../../api/ProductEndpoints'
 import ImageCard from '../../components/ImageCard'
 import TextRegular from '../../components/TextRegular'
 import TextSemiBold from '../../components/TextSemibold'
 import * as GlobalStyles from '../../styles/GlobalStyles'
 import DeleteModal from '../../components/DeleteModal'
 import defaultProductImage from '../../../assets/product.jpeg'
+import ConfirmationModal from '../../components/ConfirmationModal'
 
 export default function RestaurantDetailScreen ({ navigation, route }) {
   const [restaurant, setRestaurant] = useState({})
   const [productToBeDeleted, setProductToBeDeleted] = useState(null)
+  const [productToBePromoted, setProductToPromoted] = useState(null) // productToBePromoted: Almacena el producto a promocionar o despromocionar.
+  // Función para actualizar el estado de productToBePromoted. Por ejemplo, se llamará para establecer el producto seleccionado cuando el usuario desee promover o despromover un producto.
 
   useEffect(() => {
     fetchRestaurantDetail()
@@ -54,14 +57,25 @@ export default function RestaurantDetailScreen ({ navigation, route }) {
     )
   }
 
+  const renderCardTitle = (item) => {
+    return (<>
+        <TextSemiBold style={{ fontSize: 15 }}>{item.name}</TextSemiBold>
+        {restaurant.discount > 0 && item.promoted &&
+        <TextSemiBold style={{ marginLeft: 5, fontSize: 15, color: GlobalStyles.brandPrimary }}>({restaurant.discount}% off)</TextSemiBold>}
+      </>)
+  }
+
   const renderProduct = ({ item }) => {
     return (
       <ImageCard
         imageUri={item.image ? { uri: process.env.API_BASE_URL + '/' + item.image } : defaultProductImage}
-        title={item.name}
+        title={renderCardTitle(item)}
       >
         <TextRegular numberOfLines={2}>{item.description}</TextRegular>
-        <TextSemiBold textStyle={styles.price}>{item.price.toFixed(2)}€</TextSemiBold>
+        <TextSemiBold textStyle={styles.price}>{item.price.toFixed(2)}€
+        {restaurant.discount >= 0 && item.promoted &&
+        <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>  Price promoted: {item.price * (100 - restaurant.discount) / 100}</TextSemiBold>}
+        </TextSemiBold>
         {!item.availability &&
           <TextRegular textStyle={styles.availability }>Not available</TextRegular>
         }
@@ -84,7 +98,29 @@ export default function RestaurantDetailScreen ({ navigation, route }) {
             </TextRegular>
           </View>
         </Pressable>
-
+        <Pressable
+          onPress={() => { promoteProduct(item) }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed
+                  ? GlobalStyles.brandSuccessTap
+                  : GlobalStyles.brandSuccess
+              },
+              styles.actionButton
+            ]}>
+          <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
+            {item.promoted === true && <>
+            <MaterialCommunityIcons name='star' color={'white'} size={20}/>
+            <TextRegular textStyle={styles.text}>
+              Demote
+            </TextRegular></>}
+            {item.promoted === false && <>
+            <MaterialCommunityIcons name='star-outline' color={'white'} size={20}/>
+            <TextRegular textStyle={styles.text}>
+              Promote
+            </TextRegular></>}
+          </View>
+        </Pressable>
         <Pressable
             onPress={() => { setProductToBeDeleted(item) }}
             style={({ pressed }) => [
@@ -152,6 +188,29 @@ export default function RestaurantDetailScreen ({ navigation, route }) {
     }
   }
 
+  const promoteProduct = async (product) => { // Función para promocionar o despromocionar un producto.
+    try {
+      await promote(product.id) // Controller -> Routes ->  Endpoint, hay que hacer bien el controller para que promocione y despromocione
+      await fetchRestaurantDetail()
+      setProductToPromoted(null) // Se actualiza el estado de productToBePromoted.
+      showMessage({
+        message: `Product ${product.name} succesfully changed`,
+        type: 'success',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    } catch (error) {
+      console.log(error)
+      setProductToPromoted(null)
+      showMessage({
+        message: `Product ${product.name} could not be changed.`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -162,6 +221,12 @@ export default function RestaurantDetailScreen ({ navigation, route }) {
         renderItem={renderProduct}
         keyExtractor={item => item.id.toString()}
       />
+      <ConfirmationModal
+        isVisible={productToBePromoted !== null}
+        onCancel={() => setProductToPromoted(null)}
+        onConfirm={() => promoteProduct(productToBePromoted)}>
+          <TextRegular>You are going to promote/unpromote a product.</TextRegular>
+      </ConfirmationModal>
       <DeleteModal
         isVisible={productToBeDeleted !== null}
         onCancel={() => setProductToBeDeleted(null)}
