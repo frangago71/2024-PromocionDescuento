@@ -31,6 +31,7 @@ const loadModel = (sequelize, DataTypes) => {
       allowNull: false,
       type: DataTypes.STRING
     },
+    discount: DataTypes.INTEGER,
     description: DataTypes.TEXT,
     address: {
       allowNull: false,

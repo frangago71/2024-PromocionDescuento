@@ -11,6 +11,9 @@ module.exports = {
         allowNull: false,
         type: Sequelize.STRING
       },
+      discount: {
+        type: Sequelize.INTEGER
+      },
       description: {
         type: Sequelize.TEXT
       },

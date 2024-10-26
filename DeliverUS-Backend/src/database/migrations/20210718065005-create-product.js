@@ -18,6 +18,9 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DOUBLE
       },
+      promoted: {
+        type: Sequelize.BOOLEAN
+      },
       image: {
         type: Sequelize.STRING
       },

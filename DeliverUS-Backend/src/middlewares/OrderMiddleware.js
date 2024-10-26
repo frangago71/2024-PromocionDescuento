@@ -1,4 +1,4 @@
-import { Order, Restaurant } from '../models/models.js'
+import { Order, Product, Restaurant } from '../models/models.js'
 
 // TODO: Implement the following function to check if the order belongs to current loggedIn customer (order.userId equals or not to req.user.id)
 const checkOrderCustomer = async (req, res, next) => {
